@@ -1,4 +1,5 @@
 import time
+from itertools import combinations
 
 from git import Repo
 import os
@@ -32,9 +33,9 @@ def calculate_top_contributors(repository):
     return sorted_contributors
 
 
-print(calculate_top_contributors(repo))
 
-def display_contributions_by_author(repository, author_email):
+
+def contributions_by_author(repository, author_email):
     contributions = {}
 
     # Traverse commits
@@ -56,4 +57,33 @@ def display_contributions_by_author(repository, author_email):
     return sorted_contributors
 
 
-print(display_contributions_by_author(repo, "96774237+an-tonic@users.noreply.github.com"))
+# Extremely inefficient code, for now. Something like O of n^2 or even n3
+# Can definitely be improved, up to O of n. For example iterate over commits once not hundreds of times
+# Result: a table of all pairs that contribute to files (with number of contributions for each file)
+def calculate_git_pairs(repository):
+    authors = calculate_top_contributors(repository)
+    author_pairs = list(combinations(authors, 2))
+
+    final = {}
+    test = {}
+    bin = {}
+    for author_pair in author_pairs:
+        dict_a = contributions_by_author(repository, author_pair[0])
+        dict_b = contributions_by_author(repository, author_pair[1])
+        print(author_pair[0], dict_a)
+        print(author_pair[1], dict_b)
+        for dictionary in (dict_a, dict_b):
+            for key, value in dictionary.items():
+                if key in bin:
+                    # min value because if A contributed 5, and B contributed 3, then as a pair they contributed 3 times
+                    test[key] = min(bin[key], value)
+                else:
+                    bin[key] = value
+        # We keep only those contributions that *both* authors made, that is why we need a bin
+        final[author_pair] = test.copy()
+        test.clear()
+        bin.clear()
+    return final
+
+for key, value in calculate_git_pairs(repo).items():
+    print(key, value)
