@@ -33,8 +33,6 @@ def calculate_top_contributors(repository):
     return sorted_contributors
 
 
-
-
 def contributions_by_author(repository, author_email):
     contributions = {}
 
