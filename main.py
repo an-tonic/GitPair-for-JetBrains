@@ -7,7 +7,7 @@ import os
 
 remoteurl = "https://github.com/an-tonic/test-repo-for-jetbrains.git"
 
-folder_path = "D:/tmp"
+folder_path = "D:/git"
 
 if os.path.exists(folder_path):
     repo = Repo(folder_path)
@@ -17,7 +17,7 @@ else:
     repo = Repo.clone_from(remoteurl, folder_path)
 
 
-def calculate_top_contributors(repository):
+def get_all_contributors(repository):
     contributors = {}
 
     for commit in repository.iter_commits(reverse=True):
@@ -73,34 +73,38 @@ def get_contributors_with_files(repository):
     return contributors_with_files
 
 
-# Extremely inefficient code, for now. Something like O of n^2 or even n3
-# Can definitely be improved, up to O of n. For example iterate over commits once not hundreds of times
-# Result: a table of all pairs that contribute to files (with number of contributions for each file)
-def calculate_git_pairs(repository):
-    authors = calculate_top_contributors(repository)
-    author_pairs = list(combinations(authors, 2))
+# Calculates a pair of programmers who contribute to the same file with O of n speed (if I calculated it correctly)
+# Requires at least two authors in input (for now)
+# Input: a dictionary of authors' names and the files they have commited number of times
+# Example input: {"author_name":{"file1":5, "file2": 2}}
+# Result: a dictionary of all pairs that contribute to files (with number of contributions for each file)
+    # How it works: for each pair compars number of contributions and chooses the minimum value. I.e. if author One has
+    # changed file "X" 5 times and author Two has changed the same file 3 times - it means together they have changed
+    # it 3 times
+def calculate_git_pairs(authors_and_files_data):
 
-    final = {}
-    test = {}
-    bin = {}
-    for author_pair in author_pairs:
-        dict_a = contributions_by_author(repository, author_pair[0])
-        dict_b = contributions_by_author(repository, author_pair[1])
-        print(author_pair[0], dict_a)
-        print(author_pair[1], dict_b)
-        for dictionary in (dict_a, dict_b):
-            for key, value in dictionary.items():
-                if key in bin:
-                    # min value because if A contributed 5, and B contributed 3, then as a pair they contributed 3 times
-                    test[key] = min(bin[key], value)
-                else:
-                    bin[key] = value
-        # We keep only those contributions that *both* authors made, that is why we need a bin
-        final[author_pair] = test.copy()
-        test.clear()
-        bin.clear()
-    return final
+    git_pairs = {}
+
+    for key1, key2 in combinations(authors_and_files_data.keys(), 2):
+        combined_key = key1 + key2
+        dict1 = authors_and_files_data[key1]
+        dict2 = authors_and_files_data[key2]
+        minimal_dict = {}
+
+        # Iterate over the keys that are common to both dict1 and dict2 and find minimum key
+        for k in set(dict1) & set(dict2):
+            min_value = min(dict1.get(k, float('inf')), dict2.get(k, float('inf')))
+            minimal_dict[k] = min_value
+        sorted_minimal_dict = dict(sorted(minimal_dict.items(), key=lambda item: item[1], reverse=True))
+
+        git_pairs[combined_key] = sorted_minimal_dict
+
+    git_pairs = dict(sorted(git_pairs.items(), key=lambda item: next(iter(item[1].values())), reverse=True))
+
+    return git_pairs
 
 
-# for key, value in calculate_git_pairs(repo).items():
-#     print(key, value)
+authors = get_contributors_with_files(repo)
+
+git_pairs = calculate_git_pairs(authors)
+
