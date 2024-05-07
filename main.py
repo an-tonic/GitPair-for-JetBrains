@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 from itertools import combinations
 
 from git import Repo
@@ -39,6 +40,7 @@ def contributions_by_author(repository, author_email):
     # Traverse commits
     for commit in repository.iter_commits(reverse=True):
         if commit.author.email == author_email:
+
             # skipping the first because has no parents
             if len(commit.parents) == 0:
                 continue
@@ -53,6 +55,22 @@ def contributions_by_author(repository, author_email):
     sorted_contributors = dict(sorted(contributions.items(), key=lambda item: item[1], reverse=True))
 
     return sorted_contributors
+
+
+def get_contributors_with_files(repository):
+    contributors_with_files = defaultdict(lambda: defaultdict(int))
+
+    for commit in repository.iter_commits(reverse=True):
+        if len(commit.parents) == 0:
+            continue
+        # Extract modified files in the commit
+        modified_files = {item.a_path: 1 for item in commit.parents[0].diff(commit)}
+
+        # Update contributors_with_files directly
+        for modified_file in modified_files:
+            contributors_with_files[commit.author.email][modified_file] += 1
+
+    return contributors_with_files
 
 
 # Extremely inefficient code, for now. Something like O of n^2 or even n3
@@ -83,5 +101,6 @@ def calculate_git_pairs(repository):
         bin.clear()
     return final
 
-for key, value in calculate_git_pairs(repo).items():
-    print(key, value)
+
+# for key, value in calculate_git_pairs(repo).items():
+#     print(key, value)
